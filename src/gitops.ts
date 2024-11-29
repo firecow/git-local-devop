@@ -38,6 +38,21 @@ async function pull(dir: string, currentBranch: string, log: LogFn) {
 		return false;
 	}
 
+	let localChanges: boolean;
+	try {
+		localChanges = await hasLocalChanges(dir);
+	} catch (error) {
+		if (error instanceof ErrorWithHint) {
+			log(error);
+			return false;
+		}
+		throw error;
+	}
+
+	if (localChanges) {
+		log(chalk`{yellow ${currentBranch}} has local changes in {cyan ${dir}}`);
+	}
+
 	const msg = `${res.stdout}`.trim();
 	if (msg === "Already up to date.") {
 		log(chalk`{cyan ${currentBranch}} is up to date with {magenta origin/${currentBranch}} in {cyan ${tildify(dir)}}`);
@@ -152,20 +167,7 @@ export async function gitops(
 
 	const currentBranch = `${res.stdout}`.trim();
 
-	let localChanges: boolean;
-	try {
-		localChanges = await hasLocalChanges(dir);
-	} catch (error) {
-		if (error instanceof ErrorWithHint) {
-			log(error);
-			return logs;
-		}
-		throw error;
-	}
-
-	if (localChanges) {
-		log(chalk`{yellow ${currentBranch}} has local changes in {cyan ${dir}}`);
-	} else if (currentBranch === defaultBranch) {
+	if (currentBranch === defaultBranch) {
 		await pull(dir, currentBranch, log);
 	} else {
 		if (await pull(dir, currentBranch, log)) {
